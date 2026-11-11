@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    paths:
+      - 'bedrock-particles.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Extract zip
+        run: |
+          mkdir _src
+          unzip -q bedrock-particles.zip -d _src
+          dir=$(dirname "$(find _src -name build.gradle | head -n1)")
+          echo "SRC=$dir" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: ${{ env.SRC }}
+        run: gradle build --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bedrock-particles-jar
+          path: |
+            ${{ env.SRC }}/build/libs/*.jar
+            !${{ env.SRC }}/build/libs/*-sources.jar
